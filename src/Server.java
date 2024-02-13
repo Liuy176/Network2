@@ -6,16 +6,20 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Server implements Runnable {
     private ServerSocket serverSocket;
+    private Map<String  , Socket  >  map ; // keeps track of all connections
 
     public Server() {
+        map = new HashMap<>();
         try {
             serverSocket = new ServerSocket(8081);
             System.out.println("Server started");
         } catch (Exception e) {
-            System.err.println("Error in opening server socket");
+            System.out.println("Error in opening server socket");
             e.printStackTrace();
         }
     }
@@ -40,13 +44,14 @@ public class Server implements Runnable {
     class ClientHandler implements Runnable {
         private Socket clientSocket;
         private BufferedReader in;
-        private PrintWriter out;
+        private PrintWriter outSender;
+        private PrintWriter outReceiver;
 
         public ClientHandler(Socket clientSocket) {
             this.clientSocket = clientSocket;
             try {
                 in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                out = new PrintWriter(clientSocket.getOutputStream(), true);
+                outSender = new PrintWriter(clientSocket.getOutputStream(), true);
             } catch (IOException e) {
                 // e.printStackTrace();
                 System.err.println("Error in opening stream");
@@ -56,14 +61,37 @@ public class Server implements Runnable {
         public void run() {
             String clientMessage;
             try {
-                while ((clientMessage = in.readLine()) != null) {
-                    System.out.println("From client: " + clientMessage);
+
+                // get the name of the client
+                outSender.println("Welcome to the server ,  Please enter your name:");
+                String name = in.readLine();
+                map.put(name, clientSocket);
+                System.out.println("Client name: " + name);
+
+                // get the name of the user to chat with
+                outSender.println("Please enter the users name you want to chat with: ");
+                String receiverName = in.readLine();
+                if (map.containsKey(receiverName)) {
+                    outSender.println("User found , you can start chatting now");
+                } else {
+                    while (!map.containsKey(receiverName)) {
+                        outSender.println("User not found , Please enter the users name you want to chat with: ");
+                        receiverName = in.readLine();
+                    }
                 }
+
+                while ((clientMessage = in.readLine()) != null) {
+                    outReceiver = new PrintWriter(map.get(receiverName).getOutputStream() , true );
+                    outReceiver.println("From " + name + " : " + clientMessage);
+                }
+
+                // close the connection
                 in.close();
-                out.close();
+                outSender.close();
+                outReceiver.close();
                 clientSocket.close();
             } catch (IOException e) {
-                System.out.println("Error in message reading");
+                System.out.println("Error in message reading (Client disconnected)");
                 e.printStackTrace();
             }
         }

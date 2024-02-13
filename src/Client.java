@@ -14,6 +14,8 @@ public class Client implements Runnable {
     private PrintWriter out; // write to server
 
     public Client() {
+
+
         try {
             // creating socket
             socket = new Socket("localhost", 8081);
@@ -27,15 +29,43 @@ public class Client implements Runnable {
 
     public void run() {
         try {
+            //for input  to server
+            Scanner scanner = new Scanner(System.in);
+
+            //for output from server
+            ServerListener serverListener = new ServerListener();
+            Thread serverListenerThread = new Thread(serverListener);
+            serverListenerThread.start();
+
             while (true) {
-                Scanner scanner = new Scanner(System.in);
+
                 String input = scanner.nextLine();
-                System.out.println("Client: " + input);
                 out.println(input);
             }
         } catch (Exception e) {
             System.out.println("Error in receiving message from server");
         }
+    }
+    class ServerListener implements Runnable{
+
+
+        public void run(){
+            String serverMessage;
+            try {
+                while (true) {
+                    serverMessage = in.readLine();
+                    if (serverMessage!= null) {
+                        System.out.println("Server: " + serverMessage);
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Error in receiving message from server");
+                e.printStackTrace();
+            }
+        }
+
+
+
     }
 
     public static void main(String[] args) {
